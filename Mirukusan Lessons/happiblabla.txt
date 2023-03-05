@@ -1,0 +1,369 @@
+"Struktura programu"
+
+O.K. temat ten jest rzeczą, którą najlepiej szybko przeczytać i mieć ją już z głowy:) - nigdy nie wnikałem w tajniki dyrektyw, których trzeba użyć - ten akurat punkt programu wykonuję automatycznie i bez zastanowienia. 
+No to tak: To, że program .asm można pisać w każdym edytorze tekstowym pod warunkiem, że produkuje on plik w czystym ascii - to już zapewne wiecie.
+
+Następną rzeczą są właśnie te dyrektywy - mój standardowy program wygląda zawsze tak: 
+.model tiny 
+.code 
+org 100h 
+start: 
+... 
+end start
+
+ 
+
+Uwierzcie mi na słowo, że dotychczas takie podejście świetnie zdawało egzamin - i tak najważniejsza jest częśc między "start" i "end start" czyli to, co powyżej jest puste - to właśnie tam utkwi główny program.
+
+Jeśli jednak chcecie mieć ogólne pojęcie o sprawie to już po krótce wyjaśniam:
+
+.model tiny -	oznacza model pamięci, w którym zarówno kod (cs) jak i dane (ds) programu muszą się zmieścić w 64k - to jest jedna z cech programów typu .com.
+.code -	oznacza code segment - segment kodu programu - właśnie tu się zaczyna.
+org 100h -	program będzie się zaczynać od CS:0100H - to jest kolejna cecha programów typu .com.
+Start: -	etykieta "początek" - możnaby ją z grubsza porównać do pascalowskiego begin... 
+Innym "szablonem", który również zda egzamin, jest szablon następujący: CSEG SEGMENT ;Ustalenie symbolu ASSUME CS:CSEG, DS:CSEG, ES:CSEG ;przyporządkowanie wartości CS, DS i ES do symbolu CSEG ORG 100H Start: ... CSEG ENDS END START Ten sposób polecałbym może nawet bardziej niż poprzedni (polecam go od niedawna), gdyż umożliwi on kompilację programu bez błędów zarówno pod TASM, i prawdopodobnie pod MASM a poza tym jest chyba nawet prostszy niż schemat poprzedni.
+ 
+
+"Mov"
+
+Mov jest jedną z częściej używanych a może nawet najczęściej używaną instrukcją, toteż poznamy ją już na samym początku.
+
+Nazwa instrukcji (mov - move - przesuń) jest dość myląca, gdyż mov służy do kopiowania wartości między pamięcią a rejestrami, lub między rejestrami wyłącznie. 
+W praktyce oznacza to często, że mov używa się do nadawania rejestrom określonych wartości np. ustawienie rejestru AX na wartość 09H (AX=09H).
+
+Składnia: 
+MOV cel,zrodlo
+
+Zarówno zrodlo jak i cel mogą być rejestrem, lub komórką pamięci, ale równocześnie tylko jeden z operatorów może być pamięcią tzn. nie możemy przesyłać danych bezpośrednio na linii pamięć-pamięć, trzeba to zrobić za pomocą dwóch transferów - pamięć-rejestr i rejestr-pamięć. 
+Bez trudu natomiast można kopiować wartość jednego rejestru do innego np.:
+
+Mov AX,BX
+
+Mam nadzieję, że jest to zrozumiałe, zanim więc zakończę - dwie anomalie mov, które trzeba sobie dobrze zapamiętać:
+
+Mov kopiuje a nie przenosi wartości, czyli po wykonaniu polecenia wartość "zrodlo" nie zostaje zmieniona ani wyzerowana.
+W składni mov najpierw podajemy cel, później źródło - nie jest to pomyłka, aczkolwiek do pomyłek niekiedy prowadzi, gdyż jest niezgodne z ludzkim tokiem rozumowania:). 
+ 
+
+"Stos - instrukcje push, pop, pusha, popa, pushf i popf"
+
+Stos omówiliśmy już wcześniej - już wówczas sygnalizowałem istnienie dwóch instrukcji, które służą do obsługi stosu - PUSH i POP. Push - powoduje wrzucenie wartości lub zawartości rejestru na stos a POP - pobranie wartości ze stosu i wrzucenie jej do rejestru.
+
+Składnia: 
+PUSH REJ16 
+PUSH WAR16 
+POP REJ16
+
+"REJ16" i "WAR16" - oznaczają odpowiednio rejestr i wartość 16-bitową - tzn. nie można wrzucać ani pobierać ze stosu wartości 8-bitowych np. AL, AH...; inaczej: instrukcje PUSH i POP operują jedynie na słowach czyli danych 2-bajtowych.
+
+Instrukcja PUSHA i POPA powodują wrzucenie na stos wszystkich rejestrów - nie trzeba wywoływać kilkakrotnie instrukcji PUSH i POP - wpływa to więc na skrócenie programu. 
+Niestety - instrukcje te nie są dostępne we wszystkich wersjach procesora, czyli ich używanie w programie wpływa na kompatybilność.
+PUSHA - wrzuca wartości wszystkich rejestrów na stos,
+POPA - pobiera wartości wszystkich rejestrów ze stosu.
+Oczywiście, nie dotyczy to rejestrów IP i kilku innych, gdyż pobranie ze stosu wartości rejestru IP (instruction pointer - wskaźnik instrukcji - wskaźnik aktualnie wykonywanej instrukcji) spowodowałoby przeskok do miejsca w programie, już wykonanego, tj. przed instrukcję PUSHA, doprowadziłoby to do powstania "pętli nieskończonej".
+
+Składnia: 
+PUSHA 
+POPA 
+
+Ostatnią już parą instrukcji jest PUSHF i POPF, których działanie jest identyczne do PUSHA i POPA, lecz ogranicza się wyłącznie do flag - push flags...
+
+Składnia: 
+PUSHF 
+POPF
+
+ 
+
+
+"INT - wywołanie przerwania"
+
+
+Jak już o tym pisałem omawiając istotę przerwań, INT jest instrukcją uruchamiającą przerwanie programowe.
+
+Składnia instrukcji: 
+INT numer_przerwania 
+Numer_przerwania to liczba z zakresu 0-255, musi być podana konkretna wartość; nie można używać rejestrów np.
+
+INT AH - spowoduje komunikat o błędzie. 
+Mając dostęp do listy funkcji choćby nawet podstawowych przerwań - int 21H, int 16h, int 10H - otrzymujesz sporą gamę gotowych procedur, które będziesz mógł wykorzystać w swoich programach bez potrzeby ich (procedur) dołączania do kodu programu.
+
+Polega to na tym, że odpowiednie ustawienie rejestrów (głównie ax, bx...) i wywołanie danego przerwania powoduje wykonanie określonej procedury lub funkcji - jeśli jest to funkcja, to po powrocie z danego przerwania odpowiednie rejestry będą miały odpowiednie wartości - np:
+
+Przerwanie 21H funkcja 2CH - pobierz czas
+
+AH = 2CH
+
+Przerwanie zwraca:
+CH =	godzina (0-23)
+CL =	minuta (0-59)
+DH =	sekunda (0-59)
+DL =	setne sekundy (0-99)
+Co oznacza ten zapis? 
+Znaczy to tyle, że aby otrzymać czas korzystając z usługi przerwania 21H, należy: 
+1. Ustawić rejestr AH na wartość 2CH (MOV AH,2CH) 2. Wywołać przerwanie 21H (INT 21H). I już - rejestry CH, CL, DH i DL zawierać będą aktualny czas.
+
+Innym przykładem - dość często używanym - jest funkcja 4CH przerwania 21H. 
+Przerwanie 21H funkcja 4CH - zakończ program i zwróć kod errorlevel
+
+AH=4CH 
+AL = kod wyjścia (errorlevel dla plików .bat) 
+
+Nie zwraca nic.
+
+Tutaj postępujemy analogicznie jak w poprzednim przypadku - ustawiamy rejestry AH i AL a następnie wywołujemy przerwanie. 
+Znając choćby te dwie funkcje - można się pokusić o napisanie prostego programu, który można będzie używać w plikach sadowych (.bat) - program, który po uruchomieniu w errorlevel zwróci aktualną godzinę.
+
+ 
+
+"Deklaracja danych"
+
+ 
+
+Sama deklaracja danych jest bardzo prosta - podobnie jak w pascalu możemy nadać zadeklarowanej danej nazwę; nie wyróżnia się tu jednak typów danych tak złożonych jak w pascalu - istnieją generalnie tylko 3: byte (bajt), word (słowo - 2 bajty) i double word (podwójne słowo - 4 bajty).
+
+Istnieje też możliwość deklaracji łańcucha znaków - tekstu, co przyda się nam za chwilę, lub obszaru dowolnej długości wypełnionego jakąś określoną wartością - tego sposobu używa się np. do zadeklarowania "bufora", który będzie modyfikowany w trakcie działania programu.
+
+Skoro już umiemy deklarować dane łańcuchowe, możemy ponownie otworzyć spis funkcji przerwania 21H i spróbować naszych sił pisząc program bazujący na funkcji 09H tego przerwania.
+
+Przerwanie 21H, funkcja 09H - wyświetlenie napisu: 
+AH = 09H DS:DX = wskaźnik pierwszego znaku napisu, 
+Przerwanie nie zwraca nic. 
+Napis musi być zakończony znakiem '$'.
+
+Prawie wszystko jasne, jedyną zagadkę stanowi słówko "wskaźnik" w opisie tej funkcji. 
+Wbrew pozorom jest to proste - DS musi być ustawione na segment pamięci, w którym znajduje się nasz napis a DX na przesunięcie tego napisu w segmencie.
+
+Kolejną cechą programów .com, która przychodzi nam tu z pomocą jest fakt, że w tych programach CS = DS - kod programu jest zapisany w tym samym segmencie co dane programu i już przy ładowaniu pliku .com do pamięci CS jest ustawiane na tą samą wartość co DS. 
+Pozostaje więc problem fatalnego przesunięcia - tutaj z kolei przyda się funkcja wewnętrzna Turbo Assemblera - OFFSET. 
+Funkcja ta zwraca przesunięcie danej, której nazwę podamy w nawiasach, tak, że najpierw jest obliczane przesunięcie tej danej po kompilacji i ta wartość jest podstawiana w miejscu, gdzie wywołano funkcję - np: 
+MOV DX, OFFSET(NAPIS) spowoduje, że podczas kompilacji zostanie obliczone przesunięcie danej napis i wyliczona wartość zostanie podstawiona za offset - przy dekompilacji lub debugowaniu programu w miejscu naszej instrukcji byłaby: 
+MOV DX,121H 
+Oczywiście przy założeniu, że akurat 121H to przesunięcie zmiennej napis.
+
+Ktoś mógłby stwierdzić, że zamiast offset(napis) mogliśmy z góry wpisać 121H - miałby rację tzn. program prawdopodobnie by zadziałał, ale po co trudzić się skomplikowanymi wyliczeniami, skoro po pierwsze - kompilator zrobi to szybciej i dokładniej a po drugie jeśli zmienimy coś w programie, to cała matematyka na nic - wszystko trzebaby zrobić od nowa.
+
+ 
+
+" JMP - jump - skok "
+
+
+Instrukcja jmp jest prosta - zarówno w składni jak i działaniu - powoduje bezwarunkowy przeskok do innej części programu - analogicznie jak "goto" w pascalu czy basicu.
+
+Składnia: 
+JMP etykieta
+
+Etykieta - to podobnie jak w pascalu - ciąg znaków zakończony dwukropkiem - identyfikujący miejsce w programie np.: "Start:", "Petla:" itp.
+
+Instrukcji jmp używa się w zasadzie w połączeniu z instrukcjami skoku warunkowego, ale ma oczywiście również inne poważne zastosowania:). 
+Czasem można się spotkać z instrukcjami "JMP FAR" czy "JMP SHORT" - są to odmiany jmp nie różniące się składnią - różnica polega na tym, że "FAR" (daleki) odnosi się do skoków dłuższych niż +-128 bajtów a "SHORT" (krótki) - dotyczy skoków nie większych niż +-128 bajtów. 
+Sygnalizuję to jednak wyłącznie dla "dopełnienia" informacji o skokach - te szczegóły dla nas - początkujących programistów - nie mają żadnego istotnego znaczenia.
+
+"Podprocedury
+- instrukcje CALL i RET"
+
+ 
+
+Jak wskazuje na to temat instrukcje CALL (wołaj) i RET (return - powrót) służą do tworzenia podprocedur:) - części programu, które będą używane częściej niż raz - tak jak procedury np. w pascalu.
+
+Ponieważ wierzę w moc przykładów - znowu nie będę się zbyt długo rozwodził nad tematem... A więc do rzeczy:
+
+Składnia: 
+
+CALL ETYKIETA 
+ret
+
+CALL- zapamiętuje na stosie adres następnej instrukcji programu a następnie przeskakuje do etykiety "etykieta" tak, jak to robiła instrukcja JMP.
+
+Po napotkaniu instrukcji RET procesor pobiera ze stosu adres zapamiętany tam przez CALL i przeskakuje pod ten właśnie adres czyli "wraca" do programu nadrzędnego.
+
+Schemat użycia instrukcji CALL i RET wygląda więc następująco:
+
+Nazwa_procedury: ; etykieta określająca nazwę procedury 
+;Kod podprocedury 
+;... 
+;... 
+;... 
+RET ; Powrót do programu nadrzędnego.
+
+Gdzieś w programie natomiast - należy użyć następującego wywołania:
+
+CALL nazwa_procedury
+
+To tak dla wszystkich lubiących schematy i teorię.
+
+ 
+
+" Instrukcje CMP i J** "
+
+ 
+
+Rzecz, którą za chwilę omówię jest prawie tak samo a może nawet bardziej ważna i przydatna jak omawiane już przerwania. Dotychczas ani razu nie mówiliśmy o instrukcjach warunkowych (if .. then) ani o sposobie porównywania dwóch wartości.
+
+Do porównania dwóch wartości służy instrukcja CMP (compare - porównaj), której składnia jest następująca:
+
+CMP A, B
+
+A i B to dwie dowolne wartości, które porównujemy. Wykonanie instrukcji CMP powoduje ustawienie odpowiednich flag procesora (OF, SF, ZF), a to właśnie na tej podstawie są wykonywane instrukcje skoku, o których za chwilę - tematu które flagi są kiedy ustawiane i dlaczego tak a nie inaczej - nie chciałbym na razie zgłębiać bo może to tylko zamieszać i nie wnieść nic do sprawy...
+
+Na etapie początkowym nauki assemblera wystarczy wiedzieć, że jeśli chcemy wykonać skok warunkowy ("If a>4 then" itp.) to najpierw wykonujemy instrukcję CMP A,4 a następnie jedną z poniższych...
+
+Składnia instrukcji J**: 
+J** etykieta
+
+"Etykieta" to oczywiście (tak jak w przypadku JMP, CALL) nazwa etykiety, do której program przeskoczy jeśli... No właśnie.
+
+Przydatniejszych instrukcji J** jest kilka, ale są one nazwane wg pewnych reguł, których znajomość może zaoszczędzić sporo wkuwania więc w efekcie "nie taki diabeł straszny".
+
+Pierwszą literę tych instrukcji stanowi zawsze J (jump if - skok jeśli), później może wystąpić N (not - nie) a na końcu A (above - ponad), lub E (equal - równe), lub B (below - poniżej).
+
+Weźmy na przykład równość:
+"J"+"E" czyli JE. W ten sposób możemy też zapisać nie-równość pisząc JNE... i tak dalej.
+
+Jednej rzeczy należy się jednak nauczyć - jak już miałeś okazję zauważyć z tym assemblerem to tak nie zawsze i nie do końca "po ludzku" bywa, więc jeśli mielibyśmy instrukcje:
+
+CMP A,B 
+JA et_wieksze
+
+to ktoś mógłby zapytać, czy skok nastąpi jeśli A > B, czy jeśli B > A? Ktoś inny sprawdziłby to doświadczalnie, ale ja - z góry wyjaśniam. Tu akurat jest normalnie tzn. w powyższym przykładzie instrukcja JA wykona skok jeśli A > B - pisząc dla wyobraźni - A above B.
+
+Myślę, że to w miarę bezboleśnie wyjaśniłem - Jak zapisać >=? 
+W assemblerze istnieje instrukcja JAE (Above or Equal), której oczywiście można używać (istnieje też JBE (below or equal)) - nie są to jednak instrukcje "pierwszej potrzeby" zwłaszcza, gdy ktoś nie chce się zbyt wiele uczyć (a ktoś chce?:))), bo tak "na chłopski rozum" sprawa jest prosta: 
+Większe lub równe znaczy tyle samo co "nie mniejsze" a więc - JNB... I mamy to samo przy użyciu naszego pierwotnego szablonu bez żadnych JAE....
+
+Przeglądając zestaw instrukcji przerwania 21H można natrafić (w opisie np. otwierania pliku) na zapis, że funkcja zwraca:
+
+CF = 0 - wykonano bez błędów, 
+CF = 1 - wystąpił błąd (nr błędu jest w AX).
+
+W praktyce więc chodzi o to, żeby sprawdzić czy dana flaga jest czy nie jest aktywna... a pisałem wcześniej, że właśnie J** bazuje na flagach czym się nie należy przejmować. 
+Jeśli więc porównujemy dwie wartości, to istotnie nie ma to znaczenia, ale jeśli interesuje nas stan jakiejś konkretnej flagi, to istnieje kilka użytecznych instrukcji J** przeznaczonych właśnie do tego. Są to:
+
+JC - skok, gdy CF = 1; 
+JO - skok, gdy OF = 1; 
+JP - skok, gdy PF = 1; 
+JS - skok, gdy SF = 1; 
+JZ - skok, gdy ZF = 1;
+
+Również tutaj stosuje się nieśmiertelna zasada not, czyli można stosować zapis np. JNC, który oznacza, że CF nie jest ustawiona - CF = 0; tyczy się to oczywiście pozostałych flag także (JNO, JNP, JNS i JNZ).
+
+"Operacje matematyczne"
+
+
+Po tym wszystkim, co już dotychczas zrobiliśmy, to, czym zajmiemy się teraz jest proste jak ... się za chwilę przekonasz. 
+Nie zwlekając więc ni chwili przystąpmy do rzeczy.
+
+INC i DEC
+
+Są to instrukcje analogiczne jak w Pascalu, z małym wszakże wyjątkiem, ale o tym za moment - powodują zwiększenie lub zmniejszenie jakiejś wartości.
+
+Składnia: 
+INC A 
+DEC A
+
+No więc cała różnica polega na tym, że - jak widać - nie ma tu drugiego parametru, który określałby o ile ma być zwiększona lub zmniejszona dana wartość. Parametru tego nie ma, gdyż zawsze jest ona zmniejszana/zwiększana o 1 - słownie jeden. 
+Rozwiewając więc resztki wątpliwości wszystkich, którzy takie wątpliwości jeszcze zachowali powiem, że INC zwiększa a DEC zmniejsza daną wartość... 
+Przykładowo, jeśli w AX mamy wartość 03H, to wykonanie instrukcji
+
+INC AX - zwiększy AX o 1 - AX będzie się równać 04H.
+
+Jeśli więc w tym stanie rzeczy wykonamy instrukcję
+
+DEC AX - to wartość AX zostanie zmniejszona o 1 - z wartości 04H na 03H.
+
+ 
+
+Dodawanie i odejmowanie 
+Do tych operacji można oczywiście używać DEC i INC, ale - oczywiście - byłoby prawie nie do pomyślenia, że Assembler nie udostępnia żadnej instrukcji umożliwiającej wykonanie powyższych działań "za jednym zamachem" tzn. bez konieczności zmieniania wartości o 1. Instrukcje, które umożliwiają wykonanie dodawania lub odejmowania to ADD (dodaj) i SUB (substract - odejmij).
+
+Składnia: 
+ADD A, B
+SUB A, B
+
+Wykonanie powyższych instrukcji powoduje dodanie (lub odjęcie w przypadku SUB) wartości A i B i wrzucenie wyniku do A - np.: Jeśli AX=5 i wykonamy ADD AX, 08H - to procesor najpierw doda 5+8 a następnie wrzuci wynik do aX - po wykonaniu powyższego polecenia AX będzie równe 13 (dziesiętnie) czyli 0DH. Analogicznie - wykonanie w tym stanie rzeczy instrukcji SUB AX,3 spowoduje odjęcie trójki od aktualnej wartości AX i wrzucenie wyniku do AX (13 - 3 =10) - AX=10D czyli 0AH.
+
+ 
+
+Mnożenie
+
+Tutaj sprawa nie jest już tak prosta jak w przypadku dodawania i odejmowania, dlatego też mnożenie i dzielenie zostaną omówione oddzielnie. 
+Do mnożenia służy w Assemblerze instrukcja MUL (multiply - mnóż).
+
+Składnia: 
+MUL A
+
+Niewątpliwie wymaga to pewnych wyjaśnień - wyjaśniam więc: MUL powoduje pomnożenie wartości A razy zawartość rejestru AX, lecz sprawa wygląda nieco inaczej, gdy A jest wartością typu word (słowo - 2 bajty) lub byte (bajt).
+Gdy więc A jest to 1 bajt, wówczas wykonywane jest mnożenie a*AL (przypomnę, że AL jest to młodszy bajt rejestru AX) i wynik mnożenia zostaje wrzucany do AX. Załóżmy, że AL=2 a BL=3 - wówczas wykonanie instrukcji
+
+MUL BL - powoduje wymnożenie 2*3 i wrzucenie wyniku do AX - AX=6.
+
+Jeśli jednak A jest wartością dwubajtową, to A jest mnożone razy AX a wynik zostaje wrzucany do rejestrów DX:AX tzn. DX zawiera 2 starsze a AX młodsze bajty - np:. Jeśli AX = 0FFFFH (65535) i BX=0FFFFH (65535 również), to wykonanie 
+MUL BX wymnoży BX*AX a wynik (w tym przypadku czterobajtowy 0FFFFFFFFH czyli 4294836225D) znajdzie się w DX (2 bajty) i AX (również 2 bajty).
+
+ 
+
+Dzielenie
+
+Instrukcją dzielącą jest w Assemblerze DIV (divide - dziel).
+
+Składnia: 
+DIV A
+
+Tutaj znowu - jak w przypadku mnożenia - ma znaczenie czy A jest bajtem (np. BH, BL), czy słowem (NP. BX).
+
+Jeśli A jest bajtem, AX jest dzielony przez A; iloraz zostaje wrzucony do AL, reszta do AH. 
+Jeśli więc AL zawiera 10D (0AH), BH=3, to po 
+DIV BH 
+AL=3, AH=1 - bo oczywiście 10/3 =3 i reszty 1.
+
+Gdy A jest słowem (2 bajty), DX:AX zostaje podzielony przez A; po dzieleniu AX zawiera iloraz a DX resztę z dzielenia - np.: 
+Jeśli - posługując się analogicznym przykładem co przy mnożeniu - ustawimy DX=0FFFFH, AX=0FFFFH (dzielna =0FFFFFFFFH) i BX=0FFFFH (dzielnik), to 
+DIV BX 
+ustawi AX=0FFFFH (iloraz) DX=0000H (reszta).
+
+ 
+
+"LOOP, LOOPE, LOOPZ, LOOPNE, LOOPNZ"
+
+ 
+
+Przy naszych obecnych umiejętnościach spokojnie można zrobić pętlę "for .. to ..."
+
+Oczywiście - pętla działa co można bez trudu stwierdzić - poprawnie, lecz to jest pretekstem do wprowadzenia właśnie instrukcji LOOP.
+
+Składnia: 
+LOOP ETYKIETA
+
+Tu warto od razu wyjaśnić, że loop - z angielskiego oczywiście - znaczy "pętla". 
+No ale co właściwie robi LOOP? Mówiąc krótko - zaledwie dwie rzeczy: Po pierwsze - zmniejsza wartość CX o jeden (DEC CX), po drugie - jeśli CX jest większe 0 powoduje bezwarunkowy przeskok do "ETYKIETA".
+
+Jeśli chcielibyśmy powiedzieć to językiem procesora - LOOP ETYKIETA jest skrutem poniższych komend:
+
+DEC CX 
+CMP CX,0
+JNE ETYKIETA
+
+
+Nie trzeba tu filozofa by stwierdzić, że LOOP umożliwia tylko budowę pętli typu "downto" czy - jak w basicu - "step -1" - a po ludzku pętli, w której licznik maleje a nie rośnie. 
+Oczywiście jest to prawda, ale prawdą jest też, że nie warto się męczyć wykonywaniem powyżej pokazanej pętli, gdy można to rozwiązać LOOP'em. 
+Ponieważ postraszyłem w nagłówku pół tuzinem instrukcji, najwyższy czas zakończyć ten przydługi opis LOOP - za podsumowanie musi wystarczyć przykładowy programik.
+
+ 
+
+ 
+
+LOOPE/LOPZ, LOOPNE/LOOPNZ 
+Instrukcje LOOP?? mają - jak nie trudno się domyśleć - coś wspólnego z instrukcją LOOP. Tym czymś jest choćby użycie.
+
+Składnia:
+LOOPE ETYKIETA
+LOOPZ ETYKIETA
+LOOPNE ETYKIETA 
+LOOPNZ ETYKIETA 
+
+Nie trudno się też domyśleć, że LOOP?? dotyczą w jakiś sposób instrukcji skoku warunkowego... 
+Kończąc więc domysły wyjaśniam, że działanie instrukcji LOOP** jest następujące:
+
+Zmniejszyć CX o jeden (DEC CX - tak jak przy LOOP)
+Jeśli CX>0 wykonać skok warunkowy do "ETYKIETA" w zależności od typu instrukcji: LOOPE - JE, LOOPNE - JNE, LOOPZ - JZ, LOOPNZ - JNZ.
+Jeśli CX=0, lub nie spełniono warunku skoku warunkowego, zakończyć pętlę.
+A po jakie licho jest to wszystko aż tak dokładnie zamotane? - jedną z przyczyn jest oczywiście - wyjście na przeciw programiście... teraz ma on możliwość wykonania działania w pętli, które nie tylko będzie uzależnione od wartości CX, ale nawet może on przeprowadzić porówn anie dwóch innych wartości (np. CMP AX,BX) i również na tej podstawie wykonać pętlę lub jej nie wykonać... np. procedurka upewniająca się - zadająca użytkownikowi ważne pytanie, które musi on potwierdzić 3 razy .
